@@ -26,6 +26,8 @@ import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.ItemStackHandler;
 
+import java.util.List;
+
 import static net.minecraft.world.level.block.ChestBlock.FACING;
 
 public class QuarryDiggerBlockEntity extends BlockEntity implements MenuProvider {
@@ -41,6 +43,7 @@ public class QuarryDiggerBlockEntity extends BlockEntity implements MenuProvider
     private int currentY;
     private int startX;
     private int startZ;
+    private boolean diggingComplete = false;
 
     public QuarryDiggerBlockEntity(BlockPos pos, BlockState state) {
         super(BlockEntityTypeInit.QUARRY_DIGGER_BLOCK_ENTITY.get(), pos, state);
@@ -63,6 +66,7 @@ public class QuarryDiggerBlockEntity extends BlockEntity implements MenuProvider
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider prov) {
         super.saveAdditional(tag, prov);
         tag.putInt("BurnTime", burnTime);
+        tag.putBoolean("DiggingComplete", diggingComplete);
         tag.putInt("BreakProgress", breakProgress);
         tag.putInt("GridIndex", gridIndex);
         tag.putInt("CurrentY", currentY);
@@ -75,6 +79,7 @@ public class QuarryDiggerBlockEntity extends BlockEntity implements MenuProvider
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider prov) {
         super.loadAdditional(tag, prov);
         burnTime = tag.getInt("BurnTime");
+        diggingComplete = tag.getBoolean("DiggingComplete");
         breakProgress = tag.getInt("BreakProgress");
         gridIndex = tag.getInt("GridIndex");
         currentY = tag.getInt("CurrentY");
@@ -103,7 +108,6 @@ public class QuarryDiggerBlockEntity extends BlockEntity implements MenuProvider
     @Override
     public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt, HolderLookup.Provider prov) {
         super.onDataPacket(net, pkt, prov);
-        handleUpdateTag(pkt.getTag(), prov);
     }
 
     @Override
@@ -132,11 +136,13 @@ public class QuarryDiggerBlockEntity extends BlockEntity implements MenuProvider
 
     public static void tick(Level level, BlockPos pos, BlockState state, QuarryDiggerBlockEntity be) {
         if (level.isClientSide) return;
+        if (be.diggingComplete) return;
 
         int prevBurn = be.burnTime;
 
-        // Загрузка угля
-        if (be.burnTime <= 0 && be.inventory.getStackInSlot(0).getCount() > 0) {
+        // Подгружаем уголь
+        if (be.burnTime <= 0
+                && be.inventory.getStackInSlot(0).getCount() > 0) {
             be.inventory.extractItem(0, 1, false);
             be.burnTime = BURN_TIME_PER_COAL;
             be.breakProgress = 0;
@@ -150,85 +156,95 @@ public class QuarryDiggerBlockEntity extends BlockEntity implements MenuProvider
             Direction back = facing.getOpposite();
             Direction right = back.getClockWise();
 
-            // Сразу пропускаем пустые слои
+            // 1) Ищем блоки в 3×3 области СВЕРХУ currentY (до worldY-1)
+            int topY = be.worldPosition.getY() - 1;
+            boolean foundAbove = false;
+            outer:
+            for (int y = topY; y > be.currentY; y--) {
+                for (int dx = 0; dx < 3; dx++) {
+                    for (int dz = 0; dz < 3; dz++) {
+                        int x = be.startX + right.getStepX() * dx + back.getStepX() * dz;
+                        int z = be.startZ + right.getStepZ() * dx + back.getStepZ() * dz;
+                        BlockPos check = new BlockPos(x, y, z);
+                        BlockState s = level.getBlockState(check);
+                        if (!s.isAir() && !s.is(Blocks.BEDROCK)) {
+                            be.currentY = y;
+                            be.gridIndex = 0;
+                            be.breakProgress = 0;
+                            foundAbove = true;
+                            break outer;
+                        }
+                    }
+                }
+            }
+            if (foundAbove) {
+                be.setChanged();
+                be.sync();
+            }
+
+            // 2) Проверяем сам слой currentY
             boolean layerHasBlocks = false;
             for (int dx = 0; dx < 3 && !layerHasBlocks; dx++) {
                 for (int dz = 0; dz < 3; dz++) {
                     int x = be.startX + right.getStepX() * dx + back.getStepX() * dz;
-                    int y = be.currentY;
                     int z = be.startZ + right.getStepZ() * dx + back.getStepZ() * dz;
-                    BlockPos target = new BlockPos(x, y, z);
-                    BlockState targetState = level.getBlockState(target);
-                    if (!targetState.isAir() && !targetState.is(Blocks.BEDROCK)) {
+                    BlockPos target = new BlockPos(x, be.currentY, z);
+                    BlockState ts = level.getBlockState(target);
+                    if (!ts.isAir() && !ts.is(Blocks.BEDROCK)) {
                         layerHasBlocks = true;
                         break;
                     }
                 }
             }
+
             if (!layerHasBlocks) {
+                // переход на следующий слой вниз
                 be.gridIndex = 0;
                 be.currentY--;
                 be.breakProgress = 0;
                 if (be.currentY < level.getMinBuildHeight()) {
                     be.burnTime = 0;
+                    be.diggingComplete = true;
                 }
                 be.setChanged();
                 be.sync();
                 return;
             }
 
-            // Копаем по интервалу
+            // 3) Разрушаем блок по таймеру
             if (be.breakProgress++ >= BREAK_INTERVAL) {
                 int dx = be.gridIndex % 3;
                 int dz = be.gridIndex / 3;
                 int x = be.startX + right.getStepX() * dx + back.getStepX() * dz;
-                int y = be.currentY;
                 int z = be.startZ + right.getStepZ() * dx + back.getStepZ() * dz;
-                BlockPos target = new BlockPos(x, y, z);
-                BlockState targetState = level.getBlockState(target);
+                BlockPos target = new BlockPos(x, be.currentY, z);
+                BlockState ts = level.getBlockState(target);
 
-                if (!targetState.isAir() && !targetState.is(Blocks.BEDROCK)) {
-                    // Получаем дропы
-                    var drops = Block.getDrops(targetState, (ServerLevel) level, target, null);
-
-                    // Позиция контейнера перед лицевой панелью
+                if (!ts.isAir() && !ts.is(Blocks.BEDROCK)) {
+                    List<ItemStack> drops = Block.getDrops(ts, (ServerLevel) level, target, null);
                     BlockPos outputPos = pos.relative(facing);
-                    BlockEntity outputBe = level.getBlockEntity(outputPos);
-
-                    LazyOptional<IItemHandler> outCap = (outputBe != null)
-                            ? outputBe.getCapability(ForgeCapabilities.ITEM_HANDLER, facing.getOpposite())
+                    BlockEntity outBe = level.getBlockEntity(outputPos);
+                    LazyOptional<IItemHandler> outCap = (outBe != null)
+                            ? outBe.getCapability(ForgeCapabilities.ITEM_HANDLER, facing.getOpposite())
                             : LazyOptional.empty();
 
-                    // Попытаемся вставить во все слоты контейнера
                     for (ItemStack drop : drops) {
-                        ItemStack remainder = drop.copy();
+                        ItemStack rem = drop.copy();
                         if (outCap.isPresent()) {
-                            IItemHandler handler = outCap.orElse(null);
-                            for (int slot = 0; slot < handler.getSlots() && !remainder.isEmpty(); slot++) {
-                                remainder = handler.insertItem(slot, remainder, false);
+                            IItemHandler h = outCap.orElse(null);
+                            for (int slot = 0; slot < h.getSlots() && !rem.isEmpty(); slot++) {
+                                rem = h.insertItem(slot, rem, false);
                             }
                         }
-                        // Что не влезло — дропаем в мир
-                        if (!remainder.isEmpty()) {
-                            Block.popResource(level, pos.above(), remainder);
+                        if (!rem.isEmpty()) {
+                            Block.popResource(level, pos.above(), rem);
                         }
                     }
-
-                    // Ставим воздух вместо блока
                     level.setBlock(target, Blocks.AIR.defaultBlockState(), 3);
                 }
 
-                // Обновляем индексы
                 be.gridIndex = (be.gridIndex + 1) % 9;
-                if (be.gridIndex == 0) {
-                    be.currentY--;
-                }
-
-                if (be.currentY < level.getMinBuildHeight()) {
-                    be.burnTime = 0;
-                }
                 be.breakProgress = 0;
-                be.burnTime--;
                 be.setChanged();
             }
         }
