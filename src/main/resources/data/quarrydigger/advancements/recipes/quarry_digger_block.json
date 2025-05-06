@@ -1,0 +1,14 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "unlock": {
+      "trigger": "minecraft:recipe_unlocked",
+      "conditions": {
+        "recipe": "quarrydigger:quarry_digger_block"
+      }
+    }
+  },
+  "rewards": {
+    "recipes": ["quarrydigger:quarry_digger_block"]
+  }
+}

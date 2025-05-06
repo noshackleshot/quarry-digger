@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "quarry_digger",
+  "show_notification": true,
+  "category": "misc",
+  "pattern": [
+    "AAA",
+    "AAA",
+    "AAA"
+  ],
+  "key": {
+    "A": {
+      "item": "minecraft:diamond_block"
+    }
+  },
+  "result": {
+    "id": "quarrydigger:quarry_digger_block",
+    "count": 1
+  }
+}

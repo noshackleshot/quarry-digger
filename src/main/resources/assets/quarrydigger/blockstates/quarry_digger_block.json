@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "quarrydigger:block/quarry_digger_block", "y":   0 },
+    "facing=east":  { "model": "quarrydigger:block/quarry_digger_block", "y":  90 },
+    "facing=south": { "model": "quarrydigger:block/quarry_digger_block", "y": 180 },
+    "facing=west":  { "model": "quarrydigger:block/quarry_digger_block", "y": 270 }
+  }
+}

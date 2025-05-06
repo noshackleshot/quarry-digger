@@ -1,0 +1,7 @@
+*.DS_STORE
+run/
+run-data/
+.idea/
+.vscode/
+build/
+.gradle

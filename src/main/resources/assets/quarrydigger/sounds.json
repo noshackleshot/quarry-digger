@@ -1,0 +1,15 @@
+{
+  "quarry_digger_working": {
+    "category": "block",
+    "subtitle": "subtitles.block.quarry_digger_working",
+    "sounds": [
+      {
+        "name": "quarrydigger:quarry_digger_working",
+        "stream": true,
+        "attenuation_distance": 12,
+        "volume": 1.0,
+        "pitch": 1.0
+      }
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+pluginManagement {
+    repositories {
+        // First check Forge’s own repo for the ForgeGradle plugin…
+        maven { url = 'https://maven.minecraftforge.net' }
+        // …then the normal Gradle Plugin Portal and Maven Central
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+rootProject.name = 'quarrydigger'

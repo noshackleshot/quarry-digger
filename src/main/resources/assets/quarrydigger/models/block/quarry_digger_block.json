@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "top": "quarrydigger:block/quarry_digger_top",
+    "front": "quarrydigger:block/quarry_digger_front",
+    "side": "quarrydigger:block/quarry_digger_side"
+  }
+}
