@@ -15,24 +15,24 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.items.IItemHandler;
-import net.minecraftforge.items.ItemStackHandler;
 
-import java.util.List;
+import net.minecraft.world.inventory.ContainerLevelAccess;
 
-import static net.minecraft.world.level.block.ChestBlock.FACING;
+import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.items.ItemStackHandler;               // NeoForge ItemStackHandler :contentReference[oaicite:0]{index=0}
+
+import net.neoforged.neoforge.capabilities.Capabilities;           // NeoForge Capabilities API :contentReference[oaicite:1]{index=1}
 
 public class QuarryDiggerBlockEntity extends BlockEntity implements MenuProvider {
     public final ItemStackHandler inventory = new ItemStackHandler(1);
-    private final LazyOptional<IItemHandler> invCap = LazyOptional.of(() -> inventory);
+    // Removed LazyOptional and direct capability override in favor of NeoForge level.getCapability
 
     private int burnTime;
     private static final int BURN_TIME_PER_COAL = 1600;
@@ -51,7 +51,7 @@ public class QuarryDiggerBlockEntity extends BlockEntity implements MenuProvider
     }
 
     private void resetDiggingPosition() {
-        Direction facing = getBlockState().getValue(FACING);
+        Direction facing = getBlockState().getValue(ChestBlock.FACING);
         Direction back = facing.getOpposite();
         Direction left = back.getCounterClockWise();
         BlockPos base = worldPosition.relative(back).relative(left);
@@ -111,14 +111,6 @@ public class QuarryDiggerBlockEntity extends BlockEntity implements MenuProvider
     }
 
     @Override
-    public <T> LazyOptional<T> getCapability(Capability<T> cap, Direction side) {
-        if (cap == ForgeCapabilities.ITEM_HANDLER) {
-            return invCap.cast();
-        }
-        return super.getCapability(cap, side);
-    }
-
-    @Override
     public Component getDisplayName() {
         return Component.literal("Coal Input");
     }
@@ -135,14 +127,11 @@ public class QuarryDiggerBlockEntity extends BlockEntity implements MenuProvider
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state, QuarryDiggerBlockEntity be) {
-        if (level.isClientSide) return;
-        if (be.diggingComplete) return;
+        if (level.isClientSide || be.diggingComplete) return;
 
         int prevBurn = be.burnTime;
 
-        // Подгружаем уголь
-        if (be.burnTime <= 0
-                && be.inventory.getStackInSlot(0).getCount() > 0) {
+        if (be.burnTime <= 0 && be.inventory.getStackInSlot(0).getCount() > 0) {
             be.inventory.extractItem(0, 1, false);
             be.burnTime = BURN_TIME_PER_COAL;
             be.breakProgress = 0;
@@ -152,11 +141,10 @@ public class QuarryDiggerBlockEntity extends BlockEntity implements MenuProvider
         }
 
         if (be.burnTime > 0) {
-            Direction facing = state.getValue(FACING);
+            Direction facing = state.getValue(ChestBlock.FACING);
             Direction back = facing.getOpposite();
             Direction right = back.getClockWise();
 
-            // 1) Ищем блоки в 3×3 области СВЕРХУ currentY (до worldY-1)
             int topY = be.worldPosition.getY() - 1;
             boolean foundAbove = false;
             outer:
@@ -166,7 +154,7 @@ public class QuarryDiggerBlockEntity extends BlockEntity implements MenuProvider
                         int x = be.startX + right.getStepX() * dx + back.getStepX() * dz;
                         int z = be.startZ + right.getStepZ() * dx + back.getStepZ() * dz;
                         BlockPos check = new BlockPos(x, y, z);
-                        BlockState s = level.getBlockState(check);
+                        var s = level.getBlockState(check);
                         if (!s.isAir() && !s.is(Blocks.BEDROCK)) {
                             be.currentY = y;
                             be.gridIndex = 0;
@@ -182,14 +170,13 @@ public class QuarryDiggerBlockEntity extends BlockEntity implements MenuProvider
                 be.sync();
             }
 
-            // 2) Проверяем сам слой currentY
             boolean layerHasBlocks = false;
             for (int dx = 0; dx < 3 && !layerHasBlocks; dx++) {
                 for (int dz = 0; dz < 3; dz++) {
                     int x = be.startX + right.getStepX() * dx + back.getStepX() * dz;
                     int z = be.startZ + right.getStepZ() * dx + back.getStepZ() * dz;
-                    BlockPos target = new BlockPos(x, be.currentY, z);
-                    BlockState ts = level.getBlockState(target);
+                    var target = new BlockPos(x, be.currentY, z);
+                    var ts = level.getBlockState(target);
                     if (!ts.isAir() && !ts.is(Blocks.BEDROCK)) {
                         layerHasBlocks = true;
                         break;
@@ -198,7 +185,6 @@ public class QuarryDiggerBlockEntity extends BlockEntity implements MenuProvider
             }
 
             if (!layerHasBlocks) {
-                // переход на следующий слой вниз
                 be.gridIndex = 0;
                 be.currentY--;
                 be.breakProgress = 0;
@@ -211,29 +197,24 @@ public class QuarryDiggerBlockEntity extends BlockEntity implements MenuProvider
                 return;
             }
 
-            // 3) Разрушаем блок по таймеру
             if (be.breakProgress++ >= BREAK_INTERVAL) {
                 int dx = be.gridIndex % 3;
                 int dz = be.gridIndex / 3;
                 int x = be.startX + right.getStepX() * dx + back.getStepX() * dz;
                 int z = be.startZ + right.getStepZ() * dx + back.getStepZ() * dz;
                 BlockPos target = new BlockPos(x, be.currentY, z);
-                BlockState ts = level.getBlockState(target);
+                var ts = level.getBlockState(target);
 
                 if (!ts.isAir() && !ts.is(Blocks.BEDROCK)) {
-                    List<ItemStack> drops = Block.getDrops(ts, (ServerLevel) level, target, null);
+                    var drops = Block.getDrops(ts, (ServerLevel) level, target, null);
                     BlockPos outputPos = pos.relative(facing);
-                    BlockEntity outBe = level.getBlockEntity(outputPos);
-                    LazyOptional<IItemHandler> outCap = (outBe != null)
-                            ? outBe.getCapability(ForgeCapabilities.ITEM_HANDLER, facing.getOpposite())
-                            : LazyOptional.empty();
 
+                    IItemHandler outHandler = level.getCapability(Capabilities.ItemHandler.BLOCK, outputPos, facing.getOpposite());
                     for (ItemStack drop : drops) {
                         ItemStack rem = drop.copy();
-                        if (outCap.isPresent()) {
-                            IItemHandler h = outCap.orElse(null);
-                            for (int slot = 0; slot < h.getSlots() && !rem.isEmpty(); slot++) {
-                                rem = h.insertItem(slot, rem, false);
+                        if (outHandler != null) {
+                            for (int slot = 0; slot < outHandler.getSlots() && !rem.isEmpty(); slot++) {
+                                rem = outHandler.insertItem(slot, rem, false);
                             }
                         }
                         if (!rem.isEmpty()) {

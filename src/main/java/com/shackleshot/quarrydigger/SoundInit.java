@@ -1,25 +1,16 @@
 package com.shackleshot.quarrydigger;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.core.registries.BuiltInRegistries;            // реестр звуков в NeoForge
+import net.minecraft.core.Holder;
 import net.minecraft.sounds.SoundEvent;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.RegistryObject;
+import net.neoforged.neoforge.registries.DeferredRegister;
 
 public class SoundInit {
-    public static final DeferredRegister<SoundEvent> SOUNDS =
-            DeferredRegister.create(ForgeRegistries.SOUND_EVENTS, QuarryDiggerMod.MOD_ID);
+    public static final DeferredRegister<SoundEvent> SOUND_EVENTS =
+            DeferredRegister.create(BuiltInRegistries.SOUND_EVENT, QuarryDiggerMod.MOD_ID);
 
-    public static final RegistryObject<SoundEvent> QUARRY_DIGGER_WORKING = SOUNDS.register(
+    public static final Holder<SoundEvent> QUARRY_DIGGER_WORKING = SOUND_EVENTS.register(
             "quarry_digger_working",
-            () -> SoundEvent.createVariableRangeEvent(
-                    ResourceLocation.fromNamespaceAndPath(QuarryDiggerMod.MOD_ID, "quarry_digger_working")
-            )
+            SoundEvent::createVariableRangeEvent
     );
-
-    public static void register() {
-        SOUNDS.register(FMLJavaModLoadingContext.get().getModEventBus());
-        System.out.println("[QuarryDigger] Registering sound: quarrydigger:quarry_digger_working");
-    }
 }
