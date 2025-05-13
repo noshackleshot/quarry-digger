@@ -1,0 +1,26 @@
+modLoader="javafml"
+loaderVersion="[1,)"
+license="MIT"
+
+[[mods]]
+modId        = "quarrydigger"
+version      = "${version}"
+displayName  = "Quarry Digger"
+description  = """
+  A simple automated quarry that mines a 3×3 area.
+  Supports both coal-powered and energy-powered variants.
+"""
+authors           = "Danila Kiva"
+
+[[dependencies.quarrydigger]]
+modId="neoforge"
+mandatory=true
+versionRange="[21.1.171,)"
+ordering="NONE"
+side="BOTH"
+[[dependencies.quarrydigger]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.21.1]"
+ordering="NONE"
+side="BOTH"
