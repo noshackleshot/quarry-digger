@@ -1,130 +1,139 @@
+import groovy.json.JsonOutput
+
 plugins {
-    // ForgeGradle 6.x – required for MC 1.21.1
-    id 'net.minecraftforge.gradle' version '[6.0.24,6.2)'
-    // Standard Java + IDE support
+    id 'net.neoforged.moddev' version "${version_mdg}"  // ModDevGradle для NeoForge
     id 'java'
     id 'eclipse'
     id 'idea'
 }
 
-///////////////////////////////////////
-//  Project coordinates & Java toolchain
-///////////////////////////////////////
-
 group = 'com.shackleshot'
-version = '1.0.0'
 archivesBaseName = 'quarrydigger'
+version = "${version_minecraft}-${project.version}"
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+// Переменные для подстановки в шаблоны
+def versionReplaces = [
+        'version'          : project.version,
+        'mc_version'       : version_minecraft,
+        'neoforge_version' : version_neoforge
+]
+
+sourceSets {
+    main {
+        resources {
+            // Включаем сгенерированные метаданные (mods.toml и pack.mcmeta)
+            srcDir "$buildDir/generated/sources/modMetadata"
+        }
+    }
+    datagen {
+        compileClasspath += main.compileClasspath
+        runtimeClasspath += main.runtimeClasspath
+        compileClasspath += main.output
+        runtimeClasspath += main.output
     }
 }
 
-///////////////////////////////////////
-//  Repositories & Dependencies
-///////////////////////////////////////
-sourceSets.main.resources { srcDir 'src/generated/resources' }
+// Задача генерации mods.toml и pack.mcmeta из шаблонов
+tasks.register("generateModMetadata", ProcessResources) {
+    inputs.properties versionReplaces
+    from("src/main/templates") {
+        include "META-INF/neoforge.mods.toml", "pack.mcmeta"
+        expand versionReplaces
+        rename "neoforge.mods.toml", "mods.toml" // Переименовываем прямо в from
+    }
+    destinationDir = file("$buildDir/generated/sources/modMetadata") // Явно задаём destinationDir
+}
+
+// Основная обработка ресурсов: жёстко исключаем дубликаты и разворачиваем шаблоны
+tasks.named("processResources", ProcessResources) {
+    dependsOn tasks.named("generateModMetadata")
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    // Явно задаём входные свойства для конфигурационного кэша
+    inputs.property 'version', project.version
+    inputs.property 'pack_format', 18
+    inputs.property 'description', 'Quarry Digger Mod Resources'
+
+    filesMatching("META-INF/mods.toml") {
+        expand versionReplaces
+    }
+    filesMatching("pack.mcmeta") {
+        expand pack_format: 18, description: 'Quarry Digger Mod Resources'
+    }
+}
+
+neoForge {
+    version = version_neoforge
+    addModdingDependenciesTo sourceSets.main
+    addModdingDependenciesTo sourceSets.datagen
+
+    runs {
+        client {
+            client()
+            gameDirectory = file("$projectDir/run")
+            systemProperty "neoforge.logging.markers", "REGISTRIES"
+            systemProperty "neoforge.logging.console.level", "debug"
+        }
+        server {
+            server()
+            systemProperty "neoforge.logging.markers", "REGISTRIES"
+            systemProperty "neoforge.logging.console.level", "debug"
+            programArguments.add "-nogui"
+        }
+        data {
+            data()
+            sourceSet = sourceSets.datagen
+            systemProperty "neoforge.logging.markers", "REGISTRIES"
+            systemProperty "neoforge.logging.console.level", "debug"
+            programArguments.addAll(
+                    "--mod", "quarrydigger",
+                    "--all",
+                    "--output", file("src/generated/resources/").toString()
+            )
+        }
+    }
+
+    mods {
+        quarrydigger {
+            sourceSet sourceSets.main
+            sourceSet sourceSets.datagen
+        }
+    }
+}
 
 repositories {
-    // Your mod and FG tooling come from here
-    maven { url = 'https://maven.minecraftforge.net' }
+    maven { url = "https://maven.neoforged.net/releases" }
     mavenCentral()
+    maven { url = "https://modmaven.dev" }
+    maven { url = "https://cfa2.cursemaven.com" }
 }
 
 dependencies {
-    minecraft "net.minecraftforge:forge:1.21.1-52.1.1"
+    implementation "net.neoforged:neoforge:${version_neoforge}"
+
+
+    compileOnly   "mekanism:Mekanism:${mekanism_version}:api"
+
+    // For NeoForge just use normal runtimeOnly:
+    runtimeOnly   "mekanism:Mekanism:${mekanism_version}"
+    runtimeOnly   "mekanism:Mekanism:${mekanism_version}:additions"
+    runtimeOnly   "mekanism:Mekanism:${mekanism_version}:generators"
+    runtimeOnly   "mekanism:Mekanism:${mekanism_version}:tools"
 }
 
-minecraft {
-    // Official Mojang mappings
-    mappings channel: 'official', version: '1.21.1'
-
-    // Generate run configurations into /run
-    runs {
-        // applies to all the run configs below
-        configureEach {
-            workingDirectory project.file('run')
-
-            // Recommended logging data for a userdev environment
-            // The markers can be added/remove as needed separated by commas.
-            // "SCAN": For mods scan.
-            // "REGISTRIES": For firing of registry events.
-            // "REGISTRYDUMP": For getting the contents of all registries.
-            property 'forge.logging.markers', 'REGISTRIES'
-
-            // Recommended logging level for the console
-            // You can set various levels here.
-            // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
-            property 'forge.logging.console.level', 'debug'
-        }
-
-        client {
-            // Comma-separated list of namespaces to load gametests from. Empty = all namespaces.
-            property 'forge.enabledGameTestNamespaces', mod_id
-        }
-
-        server {
-            property 'forge.enabledGameTestNamespaces', mod_id
-            args '--nogui'
-        }
-
-        // This run config launches GameTestServer and runs all registered gametests, then exits.
-        // By default, the server will crash when no gametests are provided.
-        // The gametest system is also enabled by default for other run configs under the /test command.
-        gameTestServer {
-            property 'forge.enabledGameTestNamespaces', mod_id
-        }
-
-        data {
-            // example of overriding the workingDirectory set in configureEach above
-            workingDirectory project.file('run-data')
-
-            // Specify the modid for data generation, where to output the resulting resource, and where to look for existing resources.
-            args '--mod', mod_id, '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
-        }
-    }
-    copyIdeResources = true
-    reobf = false
-}
-
-processResources {
-    inputs.property 'version', project.version
-
-    filesMatching('META-INF/mods.toml') {
-        expand version: project.version
-    }
-
-    filesMatching('pack.mcmeta') {
-        expand 'pack_format': 18,
-                'description': 'Quarry Digger Mod Resources'
-    }
-}
-
-// (Optional) Make IntelliJ download javadoc & sources
-idea.module {
-    downloadJavadoc = true
-    downloadSources = true
-}
-
-tasks.named('jar', Jar).configure {
-    manifest {
-        attributes([
-                'Specification-Title'     : mod_id,
-                'Specification-Vendor'    : mod_authors,
-                'Specification-Version'   : '1', // We are version 1 of ourselves
-                'Implementation-Title'    : project.name,
-                'Implementation-Version'  : project.jar.archiveVersion,
-                'Implementation-Vendor'   : mod_authors
-        ])
-    }
-}
 tasks.withType(JavaCompile).configureEach {
-    options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
+    options.encoding = "UTF-8"
 }
 
-sourceSets.each {
-    def dir = layout.buildDirectory.dir("sourcesSets/$it.name")
-    it.output.resourcesDir = dir
-    it.java.destinationDirectory = dir
+tasks.named("jar", Jar) {
+    manifest {
+        attributes(
+                "Specification-Title": "quarrydigger",
+                "Specification-Vendor": "shackleshot",
+                "Specification-Version": "1",
+                "Implementation-Title": project.name,
+                "Implementation-Version": project.version,
+                "Implementation-Vendor": "shackleshot"
+        )
+    }
 }

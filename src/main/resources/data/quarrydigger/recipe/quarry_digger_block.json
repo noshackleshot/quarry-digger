@@ -4,13 +4,22 @@
   "show_notification": true,
   "category": "misc",
   "pattern": [
-    "AAA",
-    "AAA",
-    "AAA"
+    "PPP",
+    "RBR",
+    "III"
   ],
   "key": {
-    "A": {
+    "P": {
+      "item": "minecraft:diamond_pickaxe"
+    },
+    "R": {
+      "item": "minecraft:redstone"
+    },
+    "B": {
       "item": "minecraft:diamond_block"
+    },
+    "I": {
+      "item": "minecraft:iron_block"
     }
   },
   "result": {

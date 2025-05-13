@@ -1,4 +1,3 @@
-// src/main/java/com/shackleshot/quarrydigger/QuarryDiggerMenu.java
 package com.shackleshot.quarrydigger;
 
 import net.minecraft.core.BlockPos;
@@ -9,8 +8,9 @@ import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraftforge.items.ItemStackHandler;
-import net.minecraftforge.items.SlotItemHandler;
+
+import net.neoforged.neoforge.items.ItemStackHandler;       // NeoForge-версия обработчика
+import net.neoforged.neoforge.items.SlotItemHandler;       // NeoForge-версия слота
 
 public class QuarryDiggerMenu extends AbstractContainerMenu {
     private final QuarryDiggerBlockEntity blockEntity;
@@ -24,8 +24,9 @@ public class QuarryDiggerMenu extends AbstractContainerMenu {
         );
 
         var be = playerInventory.player.level().getBlockEntity(pos);
-        if (!(be instanceof QuarryDiggerBlockEntity qbe))
+        if (!(be instanceof QuarryDiggerBlockEntity qbe)) {
             throw new IllegalStateException("Wrong BlockEntity!");
+        }
         this.blockEntity = qbe;
         this.inventory = qbe.inventory;
 
@@ -38,23 +39,26 @@ public class QuarryDiggerMenu extends AbstractContainerMenu {
         });
 
         // Игровой инвентарь
-        for (int row = 0; row < 3; ++row)
-            for (int col = 0; col < 9; ++col)
+        for (int row = 0; row < 3; ++row) {
+            for (int col = 0; col < 9; ++col) {
                 this.addSlot(new Slot(
                         playerInventory,
                         col + row * 9 + 9,
                         8 + col * 18,
                         84 + row * 18
                 ));
+            }
+        }
 
         // Хотбар
-        for (int col = 0; col < 9; ++col)
+        for (int col = 0; col < 9; ++col) {
             this.addSlot(new Slot(
                     playerInventory,
                     col,
                     8 + col * 18,
                     142
             ));
+        }
     }
 
     @Override
@@ -74,23 +78,27 @@ public class QuarryDiggerMenu extends AbstractContainerMenu {
 
             if (index == 0) {
                 // из нашего слота в инвентарь
-                if (!this.moveItemStackTo(stackInSlot, 1, this.slots.size(), true))
+                if (!this.moveItemStackTo(stackInSlot, 1, this.slots.size(), true)) {
                     return ItemStack.EMPTY;
+                }
             } else if (stackInSlot.is(Items.COAL)
                     || stackInSlot.is(Items.CHARCOAL)) {
                 // из инвентаря в наш слот
-                if (!this.moveItemStackTo(stackInSlot, 0, 1, false))
+                if (!this.moveItemStackTo(stackInSlot, 0, 1, false)) {
                     return ItemStack.EMPTY;
+                }
             } else {
                 // всё остальное
-                if (!this.moveItemStackTo(stackInSlot, 1, this.slots.size(), false))
+                if (!this.moveItemStackTo(stackInSlot, 1, this.slots.size(), false)) {
                     return ItemStack.EMPTY;
+                }
             }
 
-            if (stackInSlot.isEmpty())
+            if (stackInSlot.isEmpty()) {
                 slot.set(ItemStack.EMPTY);
-            else
+            } else {
                 slot.setChanged();
+            }
 
             blockEntity.setChanged();
         }
