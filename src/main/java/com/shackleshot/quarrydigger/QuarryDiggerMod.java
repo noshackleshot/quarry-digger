@@ -27,6 +27,9 @@ public class QuarryDiggerMod {
     public static final Blocks BLOCKS = DeferredRegister.createBlocks(MOD_ID);
     public static final Items ITEMS = DeferredRegister.createItems(MOD_ID);
 
+    public static final DeferredItem<Item> QUARRY_CORE_ITEM =
+            ITEMS.register("quarry_core", () -> new Item(new Item.Properties()));
+
     public static final DeferredBlock<QuarryDiggerBlock> QUARRY_DIGGER_BLOCK =
             BLOCKS.registerBlock(
                     "quarry_digger_block",
@@ -52,17 +55,12 @@ public class QuarryDiggerMod {
                             .strength(4.0f)
             );
 
-    // 5) Его BlockItem (вариант без указания свойств, использует дефолтные)
     public static final DeferredItem<BlockItem> ENERGY_QUARRY_DIGGER_ITEM =
             ITEMS.registerSimpleBlockItem(
                     "energy_quarry_digger_block",
                     ENERGY_QUARRY_DIGGER_BLOCK
             );
 
-    /**
-     * Конструктор мода, вызывается NeoForge.
-     * В него передаётся только модовая шина событий.
-     */
     public QuarryDiggerMod(IEventBus modBus) {
         BLOCKS.register(modBus);
         ITEMS.register(modBus);
@@ -77,16 +75,12 @@ public class QuarryDiggerMod {
         System.out.println("[QuarryDigger] Mod initialized");
     }
 
-    /**
-     * Регистрация capabilities для блок-сущностей.
-     * Это необходимо для совместимости с новой системой NeoForge 20.3 и Mekanism.
-     */
     @SubscribeEvent
     public void registerCapabilities(RegisterCapabilitiesEvent event) {
         event.registerBlockEntity(
-                Capabilities.EnergyStorage.BLOCK, // Тип capability для энергии
-                EnergyBlockEntityTypeInit.ENERGY_QUARRY_DIGGER_BLOCK_ENTITY.get(), // Тип блок-сущности
-                (be, side) -> be.getEnergyStorage() // Лямбда, возвращающая IEnergyStorage
+                Capabilities.EnergyStorage.BLOCK,
+                EnergyBlockEntityTypeInit.ENERGY_QUARRY_DIGGER_BLOCK_ENTITY.get(),
+                (be, side) -> be.getEnergyStorage()
         );
     }
 }
