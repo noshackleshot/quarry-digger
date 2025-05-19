@@ -1,12 +1,19 @@
 {
   "type": "minecraft:crafting_shaped",
+  "group": "quarry_digger",
+  "show_notification": true,
+  "category": "misc",
   "pattern": [
-    "AAA",
-    "A A",
-    "AAA"
+    "PDP",
+    "RCR",
+    "III"
   ],
   "key": {
-    "A": { "item": "minecraft:iron_ingot" }
+    "P": { "item": "minecraft:diamond_pickaxe" },
+    "D": { "item": "minecraft:diamond" },
+    "R": { "item": "minecraft:redstone" },
+    "C": { "item": "quarrydigger:quarry_core" },
+    "I": { "item": "minecraft:iron_block" }
   },
   "result": {
     "id": "quarrydigger:energy_quarry_digger_block",
