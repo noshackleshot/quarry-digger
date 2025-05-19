@@ -93,7 +93,6 @@ public abstract class AbstractQuarryDiggerBlockEntity extends BlockEntity implem
         Direction back   = facing.getOpposite();
         Direction right  = back.getClockWise();
 
-        // 1) Find new highest block above currentY
         int topY = be.worldPosition.getY() - 1;
         boolean foundAbove = false;
         outer:
@@ -118,7 +117,6 @@ public abstract class AbstractQuarryDiggerBlockEntity extends BlockEntity implem
             be.setChanged();
         }
 
-        // 2) Check if layer has any blocks left
         boolean layerHasBlocks = false;
         for (int dx = 0; dx < 3 && !layerHasBlocks; dx++) {
             for (int dz = 0; dz < 3; dz++) {
@@ -139,7 +137,6 @@ public abstract class AbstractQuarryDiggerBlockEntity extends BlockEntity implem
             return;
         }
 
-        // 3) Break blocks in sequence
         if (be.breakProgress++ >= BREAK_INTERVAL) {
             int dx = be.gridIndex % 3;
             int dz = be.gridIndex / 3;
@@ -185,12 +182,12 @@ public abstract class AbstractQuarryDiggerBlockEntity extends BlockEntity implem
 
     @Override
     public Component getDisplayName() {
-        return Component.literal(""); // Подклассы переопределяют по необходимости
+        return Component.literal("");
     }
 
     @Override
     public AbstractContainerMenu createMenu(int id, Inventory inv, Player player) {
-        return null; // Подклассы переопределяют по необходимости
+        return null;
     }
 
     @Override

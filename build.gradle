@@ -105,6 +105,13 @@ repositories {
 
 dependencies {
     implementation "net.neoforged:neoforge:${version_neoforge}"
+
+    compileOnly   "mekanism:Mekanism:${mekanism_version}:api"
+
+    runtimeOnly   "mekanism:Mekanism:${mekanism_version}"
+    runtimeOnly   "mekanism:Mekanism:${mekanism_version}:additions"
+    runtimeOnly   "mekanism:Mekanism:${mekanism_version}:generators"
+    runtimeOnly   "mekanism:Mekanism:${mekanism_version}:tools"
 }
 
 tasks.withType(JavaCompile).configureEach {
