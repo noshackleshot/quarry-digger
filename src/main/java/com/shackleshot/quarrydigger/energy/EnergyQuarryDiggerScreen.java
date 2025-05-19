@@ -1,11 +1,7 @@
-// src/main/java/com/shackleshot/quarrydigger/energy/EnergyQuarryDiggerScreen.java
 package com.shackleshot.quarrydigger.energy;
 
 import com.shackleshot.quarrydigger.QuarryDiggerMod;
-import com.shackleshot.quarrydigger.energy.EnergyQuarryDiggerMenu;
-import com.shackleshot.quarrydigger.energy.EnergyQuarryDiggerBlockEntity;
 import com.mojang.blaze3d.systems.RenderSystem;
-
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
@@ -17,38 +13,39 @@ public class EnergyQuarryDiggerScreen extends AbstractContainerScreen<EnergyQuar
             ResourceLocation.fromNamespaceAndPath(QuarryDiggerMod.MOD_ID,
                     "textures/gui/container/energy_quarry_digger.png");
 
-    public EnergyQuarryDiggerScreen(EnergyQuarryDiggerMenu menu,
-                                    Inventory inv,
-                                    Component title) {
+    // Точные размеры твоей GUI-картинки
+    private static final int TEX_WIDTH  = 168;
+    private static final int TEX_HEIGHT = 168;
+
+    public EnergyQuarryDiggerScreen(EnergyQuarryDiggerMenu menu, Inventory inv, Component title) {
         super(menu, inv, title);
-        this.imageWidth = 176;
-        this.imageHeight = 166;
+        this.imageWidth = TEX_WIDTH;
+        this.imageHeight = TEX_HEIGHT;
     }
 
     @Override
     protected void renderBg(GuiGraphics g, float partialTicks, int mouseX, int mouseY) {
         RenderSystem.setShaderTexture(0, TEXTURE);
-        g.blit(TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight);
-
-        int stored = menu.getEnergyStored();
-        int cap    = menu.getCapacity();
-        int h      = (int) (50 * (stored / (float) cap));
-        g.blit(TEXTURE,
-                leftPos + 10,
-                topPos + imageHeight - 60 + (50 - h),
-                imageWidth, imageHeight,
-                14, h,
-                imageWidth, imageHeight + 50
+        // Просто отрисовываем всю картинку, без ресайза
+        g.blit(
+                TEXTURE,
+                leftPos, topPos,
+                0, 0,
+                TEX_WIDTH, TEX_HEIGHT,
+                TEX_WIDTH, TEX_HEIGHT
         );
     }
 
     @Override
     protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
-        super.renderLabels(g, mouseX, mouseY);
-        int stored = menu.getEnergyStored();
-        int cap    = menu.getCapacity();
-        String text = stored + " / " + cap;
-        g.drawString(this.font, Component.literal(text), 10, 7, 0xFFFFFF, false);
+        // Посередине экрана: координаты центра
+        String text = menu.getEnergyStored() + " / " + menu.getCapacity();
+
+        int textWidth = font.width(text);
+        int x = (this.imageWidth - textWidth) / 2;
+        int y = this.imageHeight / 2 - font.lineHeight / 2;
+
+        g.drawString(font, text, x, y, 0x000000, false);
     }
 
     @Override

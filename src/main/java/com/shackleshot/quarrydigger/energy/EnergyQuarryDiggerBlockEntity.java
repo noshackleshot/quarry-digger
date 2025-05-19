@@ -6,6 +6,7 @@ import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
@@ -23,22 +24,22 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-
 import net.neoforged.neoforge.energy.EnergyStorage;
-import net.neoforged.neoforge.energy.IEnergyStorage;
 import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.capabilities.Capabilities;
 
 public class EnergyQuarryDiggerBlockEntity extends BlockEntity implements MenuProvider {
-    public static final int CAPACITY             = 10_000;
-    public static final int ENERGY_PER_OPERATION = 5_000;
-    public static final int BREAK_INTERVAL       = 20;
-    public static final int DISCHARGE_RATE       = 200;
+    public static final int CAPACITY = 10_000;
+    public static final int ENERGY_PER_OPERATION = 10_000;
+    public static final int BREAK_INTERVAL = 20;
 
-    public final EnergyStorage energy =
-            new EnergyStorage(CAPACITY, CAPACITY, CAPACITY);
+    private int breakProgress = 0;
+    private int gridIndex = 0;
+    private int currentY = 0;
+    private int startX = 0, startZ = 0;
+    private boolean searchingAbove = false;
 
-    private int breakProgress, gridIndex, currentY, startX, startZ;
+    public final EnergyStorage energy = new EnergyStorage(CAPACITY, CAPACITY, CAPACITY);
 
     public EnergyQuarryDiggerBlockEntity(BlockPos pos, BlockState state) {
         super(EnergyBlockEntityTypeInit.ENERGY_QUARRY_DIGGER_BLOCK_ENTITY.get(), pos, state);
@@ -47,26 +48,28 @@ public class EnergyQuarryDiggerBlockEntity extends BlockEntity implements MenuPr
 
     private void resetDiggingPosition() {
         Direction facing = getBlockState().getValue(ChestBlock.FACING);
-        Direction back   = facing.getOpposite();
-        Direction left   = back.getCounterClockWise();
-        BlockPos base    = worldPosition.relative(back).relative(left);
+        Direction back = facing.getOpposite();
+        Direction left = back.getCounterClockWise();
+        BlockPos base = worldPosition.relative(back).relative(left);
 
-        startX        = base.getX();
-        startZ        = base.getZ();
-        currentY      = worldPosition.getY() - 1;
-        gridIndex     = 0;
+        startX = base.getX();
+        startZ = base.getZ();
+        currentY = worldPosition.getY() - 1;
+        gridIndex = 0;
         breakProgress = 0;
+        searchingAbove = false;
     }
 
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider prov) {
         super.saveAdditional(tag, prov);
-        tag.putInt("Energy",        energy.getEnergyStored());
+        tag.putInt("Energy", energy.getEnergyStored());
         tag.putInt("BreakProgress", breakProgress);
-        tag.putInt("GridIndex",     gridIndex);
-        tag.putInt("CurrentY",      currentY);
-        tag.putInt("StartX",        startX);
-        tag.putInt("StartZ",        startZ);
+        tag.putInt("GridIndex", gridIndex);
+        tag.putInt("CurrentY", currentY);
+        tag.putInt("StartX", startX);
+        tag.putInt("StartZ", startZ);
+        tag.putBoolean("SearchingAbove", searchingAbove);
     }
 
     @Override
@@ -74,12 +77,12 @@ public class EnergyQuarryDiggerBlockEntity extends BlockEntity implements MenuPr
         super.loadAdditional(tag, prov);
         energy.extractEnergy(energy.getEnergyStored(), false);
         energy.receiveEnergy(tag.getInt("Energy"), false);
-
         breakProgress = tag.getInt("BreakProgress");
-        gridIndex     = tag.getInt("GridIndex");
-        currentY      = tag.getInt("CurrentY");
-        startX        = tag.getInt("StartX");
-        startZ        = tag.getInt("StartZ");
+        gridIndex = tag.getInt("GridIndex");
+        currentY = tag.getInt("CurrentY");
+        startX = tag.getInt("StartX");
+        startZ = tag.getInt("StartZ");
+        searchingAbove = tag.getBoolean("SearchingAbove");
     }
 
     @Override
@@ -100,9 +103,7 @@ public class EnergyQuarryDiggerBlockEntity extends BlockEntity implements MenuPr
     }
 
     @Override
-    public void onDataPacket(Connection net,
-                             ClientboundBlockEntityDataPacket pkt,
-                             HolderLookup.Provider prov) {
+    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt, HolderLookup.Provider prov) {
         super.onDataPacket(net, pkt, prov);
     }
 
@@ -112,9 +113,7 @@ public class EnergyQuarryDiggerBlockEntity extends BlockEntity implements MenuPr
     }
 
     @Override
-    public AbstractContainerMenu createMenu(int id,
-                                            Inventory inv,
-                                            Player player) {
+    public AbstractContainerMenu createMenu(int id, Inventory inv, Player player) {
         return new EnergyQuarryDiggerMenu(id, inv, this.worldPosition);
     }
 
@@ -122,86 +121,102 @@ public class EnergyQuarryDiggerBlockEntity extends BlockEntity implements MenuPr
         return energy;
     }
 
-    public static void tick(Level level,
-                            BlockPos pos,
-                            BlockState state,
-                            EnergyQuarryDiggerBlockEntity be) {
+    private BlockPos getGridPos(Direction right, Direction back, int dx, int dz, int y) {
+        int x = startX + right.getStepX() * dx + back.getStepX() * dz;
+        int z = startZ + right.getStepZ() * dx + back.getStepZ() * dz;
+        return new BlockPos(x, y, z);
+    }
+
+    private static boolean layerHasBreakables(Level level, Direction right, Direction back, int startX, int startZ, int y) {
+        for (int dx = 0; dx < 3; dx++)
+            for (int dz = 0; dz < 3; dz++) {
+                int x = startX + right.getStepX() * dx + back.getStepX() * dz;
+                int z = startZ + right.getStepZ() * dx + back.getStepZ() * dz;
+                BlockState bs = level.getBlockState(new BlockPos(x, y, z));
+                if (!bs.isAir() && !bs.is(Blocks.BEDROCK)) return true;
+            }
+        return false;
+    }
+
+    private static int findHighestBreakableY(Level level, Direction right, Direction back, int startX, int startZ, int minY, int maxY) {
+        for (int y = maxY; y >= minY; y--) {
+            if (layerHasBreakables(level, right, back, startX, startZ, y)) return y;
+        }
+        return -1;
+    }
+
+    public static void tick(Level level, BlockPos pos, BlockState state, EnergyQuarryDiggerBlockEntity be) {
         if (level.isClientSide) return;
 
         Direction facing = state.getValue(ChestBlock.FACING);
-
-        Optional<IEnergyStorage> cableCap = Optional.ofNullable(level.getCapability(
-                Capabilities.EnergyStorage.BLOCK,
-                pos.relative(facing),
-                facing.getOpposite()
-        ));
-        if (cableCap.isEmpty()) {
-            be.energy.extractEnergy(DISCHARGE_RATE, false);
-            be.setChanged();
-            level.sendBlockUpdated(pos, state, state, 3);
-        }
-
-        if (be.energy.getEnergyStored() < ENERGY_PER_OPERATION) return;
-
-        Direction back  = facing.getOpposite();
+        Direction back = facing.getOpposite();
         Direction right = back.getClockWise();
+        int minY = 1;
+        int maxY = be.worldPosition.getY() - 1;
 
-        int topY = be.worldPosition.getY() - 1;
-        boolean foundAbove = false;
-        outer:
-        for (int y = topY; y > be.currentY; y--) {
-            for (int dx = 0; dx < 3; dx++) {
-                for (int dz = 0; dz < 3; dz++) {
-                    int x = be.startX + right.getStepX()*dx + back.getStepX()*dz;
-                    int z = be.startZ + right.getStepZ()*dx + back.getStepZ()*dz;
-                    BlockPos check = new BlockPos(x, y, z);
-                    var st = level.getBlockState(check);
-                    if (!st.isAir() && !st.is(Blocks.BEDROCK)) {
-                        be.currentY      = y;
-                        be.gridIndex     = 0;
-                        be.breakProgress = 0;
-                        foundAbove       = true;
-                        break outer;
-                    }
-                }
-            }
-        }
-        if (foundAbove) {
-            be.setChanged();
-        }
-
-        boolean layerHasBlocks = false;
-        for (int dx = 0; dx < 3 && !layerHasBlocks; dx++) {
-            for (int dz = 0; dz < 3; dz++) {
-                int x = be.startX + right.getStepX()*dx + back.getStepX()*dz;
-                int z = be.startZ + right.getStepZ()*dx + back.getStepZ()*dz;
-                if (!level.getBlockState(new BlockPos(x, be.currentY, z)).isAir()) {
-                    layerHasBlocks = true;
-                    break;
-                }
-            }
-        }
-        if (!layerHasBlocks) {
-            be.currentY--;
-            be.gridIndex     = 0;
+        int yWithBlock = findHighestBreakableY(level, right, back, be.startX, be.startZ, minY, maxY);
+        if (yWithBlock > be.currentY) {
+            be.currentY = yWithBlock;
+            be.gridIndex = 0;
             be.breakProgress = 0;
+            be.searchingAbove = true;
             be.setChanged();
-            level.invalidateCapabilities(pos);
+            return;
+        }
+        be.searchingAbove = false;
+
+        if (!layerHasBreakables(level, right, back, be.startX, be.startZ, be.currentY)) {
+            if (be.currentY > minY) {
+                be.currentY--;
+                be.gridIndex = 0;
+                be.breakProgress = 0;
+                be.setChanged();
+            }
             return;
         }
 
-        if (be.breakProgress++ >= BREAK_INTERVAL) {
-            int dx = be.gridIndex % 3;
-            int dz = be.gridIndex / 3;
-            int x  = be.startX + right.getStepX()*dx + back.getStepX()*dz;
-            int z  = be.startZ + right.getStepZ()*dx + back.getStepZ()*dz;
-            BlockPos target = new BlockPos(x, be.currentY, z);
-            BlockState ts   = level.getBlockState(target);
+        if (be.energy.getEnergyStored() < ENERGY_PER_OPERATION) {
+            be.breakProgress = 0;
+            return;
+        }
 
-            if (!ts.isAir() && !ts.is(Blocks.BEDROCK)) {
+        for (int i = 0; i < 9; i++) {
+            int idx = (be.gridIndex + i) % 9;
+            int dx = idx % 3;
+            int dz = idx / 3;
+            BlockPos target = be.getGridPos(right, back, dx, dz, be.currentY);
+            BlockState targetState = level.getBlockState(target);
+
+            if (targetState.isAir() || targetState.is(Blocks.BEDROCK))
+                continue;
+
+            if (++be.breakProgress < BREAK_INTERVAL) {
+                if (!level.isClientSide) {
+                    double quarryX = be.worldPosition.getX() + 0.5;
+                    double quarryY = be.worldPosition.getY() + 0.5;
+                    double quarryZ = be.worldPosition.getZ() + 0.5;
+                    double targetX = target.getX() + 0.5;
+                    double targetZ = target.getZ() + 0.5;
+                    double targetY = target.getY() + 0.5;
+
+                    for (double t = 0; t <= 1; t += 0.05) {
+                        double x = quarryX + t * (targetX - quarryX);
+                        double z = quarryZ + t * (targetZ - quarryZ);
+                        ((ServerLevel) level).sendParticles(ParticleTypes.END_ROD, x, quarryY, z, 1, 0, 0, 0, 0);
+                    }
+
+                    for (double y = quarryY; y >= targetY; y -= 0.1) {
+                        ((ServerLevel) level).sendParticles(ParticleTypes.END_ROD, targetX, y, targetZ, 1, 0, 0, 0, 0);
+                    }
+                }
+                be.gridIndex = idx;
+                be.setChanged();
+                return;
+            }
+
+            if (!level.isClientSide && !targetState.isAir() && !targetState.is(Blocks.BEDROCK)) {
                 List<net.minecraft.world.item.ItemStack> drops =
-                        Block.getDrops(ts, (ServerLevel)level, target, null);
-
+                        Block.getDrops(targetState, (ServerLevel) level, target, null);
                 BlockPos outPos = pos.relative(facing);
                 Optional<IItemHandler> handlerOpt = Optional.ofNullable(level.getCapability(
                         Capabilities.ItemHandler.BLOCK,
@@ -222,15 +237,15 @@ public class EnergyQuarryDiggerBlockEntity extends BlockEntity implements MenuPr
                     }
                 }
                 level.setBlock(target, Blocks.AIR.defaultBlockState(), 3);
+                be.energy.extractEnergy(ENERGY_PER_OPERATION, false);
+                be.gridIndex = (idx + 1) % 9;
+                be.breakProgress = 0;
+                be.setChanged();
+                level.sendBlockUpdated(pos, state, state, 3);
+                return;
             }
-
-            be.energy.extractEnergy(ENERGY_PER_OPERATION, false);
-            be.setChanged();
-            level.invalidateCapabilities(pos);
-            level.sendBlockUpdated(pos, state, state, 3);
-
-            be.gridIndex     = (be.gridIndex + 1) % 9;
-            be.breakProgress = 0;
         }
+        be.breakProgress = 0;
+        be.gridIndex = 0;
     }
 }

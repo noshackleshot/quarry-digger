@@ -27,7 +27,6 @@ public class EnergyQuarryDiggerMenu extends AbstractContainerMenu {
         }
         this.be = (EnergyQuarryDiggerBlockEntity) te;
 
-        // Синхронизируем текущее и максимальное значение энергии
         this.energySlot = new DataSlot() {
             @Override public int get() { return be.energy.getEnergyStored(); }
             @Override public void set(int value) { /* серверный слот */ }
@@ -50,9 +49,6 @@ public class EnergyQuarryDiggerMenu extends AbstractContainerMenu {
         return stillValid(access, player, QuarryDiggerMod.ENERGY_QUARRY_DIGGER_BLOCK.get());
     }
 
-    /**
-     * Геттеры для экрана
-     */
     public int getEnergyStored() {
         return energySlot.get();
     }

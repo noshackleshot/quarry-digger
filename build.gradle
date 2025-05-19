@@ -9,11 +9,11 @@ plugins {
 
 group = 'com.shackleshot'
 archivesBaseName = 'quarrydigger'
-version = "${version_minecraft}-${project.version}"
+version = "${version_minecraft}-${version_build}"
 
 // Переменные для подстановки в шаблоны
 def versionReplaces = [
-        'version'          : project.version,
+        'version'          : version_build,
         'mc_version'       : version_minecraft,
         'neoforge_version' : version_neoforge
 ]
@@ -33,28 +33,23 @@ sourceSets {
     }
 }
 
-// Задача генерации mods.toml и pack.mcmeta из шаблонов
 tasks.register("generateModMetadata", ProcessResources) {
     inputs.properties versionReplaces
     from("src/main/templates") {
         include "META-INF/neoforge.mods.toml", "pack.mcmeta"
         expand versionReplaces
-        rename "neoforge.mods.toml", "mods.toml" // Переименовываем прямо в from
     }
-    destinationDir = file("$buildDir/generated/sources/modMetadata") // Явно задаём destinationDir
+    destinationDir = file("$buildDir/generated/sources/modMetadata")
 }
 
-// Основная обработка ресурсов: жёстко исключаем дубликаты и разворачиваем шаблоны
 tasks.named("processResources", ProcessResources) {
     dependsOn tasks.named("generateModMetadata")
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-
-    // Явно задаём входные свойства для конфигурационного кэша
     inputs.property 'version', project.version
     inputs.property 'pack_format', 18
     inputs.property 'description', 'Quarry Digger Mod Resources'
 
-    filesMatching("META-INF/mods.toml") {
+    filesMatching("META-INF/neoforge.mods.toml") {
         expand versionReplaces
     }
     filesMatching("pack.mcmeta") {
@@ -106,19 +101,25 @@ repositories {
     mavenCentral()
     maven { url = "https://modmaven.dev" }
     maven { url = "https://cfa2.cursemaven.com" }
+    maven {
+        name = "Jared's maven"
+        url = "https://maven.blamejared.com/"
+    }
 }
 
 dependencies {
     implementation "net.neoforged:neoforge:${version_neoforge}"
 
-
     compileOnly   "mekanism:Mekanism:${mekanism_version}:api"
 
-    // For NeoForge just use normal runtimeOnly:
     runtimeOnly   "mekanism:Mekanism:${mekanism_version}"
     runtimeOnly   "mekanism:Mekanism:${mekanism_version}:additions"
     runtimeOnly   "mekanism:Mekanism:${mekanism_version}:generators"
     runtimeOnly   "mekanism:Mekanism:${mekanism_version}:tools"
+    // compile against the JEI API but do not include it at runtime
+    compileOnly("mezz.jei:jei-${mc_version}-neoforge-api:${jei_version}")
+    // at runtime, use the full JEI jar for NeoForge
+    runtimeOnly("mezz.jei:jei-${mc_version}-neoforge:${jei_version}")
 }
 
 tasks.withType(JavaCompile).configureEach {
