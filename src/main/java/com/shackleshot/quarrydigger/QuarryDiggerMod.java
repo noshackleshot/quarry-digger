@@ -69,7 +69,8 @@ public class QuarryDiggerMod {
         SoundInit.SOUND_EVENTS.register(modBus);
         EnergyBlockEntityTypeInit.BLOCK_ENTITIES.register(modBus);
 
-        // Регистрация события для capabilities
+        CreativeTabInit.register(modBus);
+
         modBus.addListener(this::registerCapabilities);
 
         System.out.println("[QuarryDigger] Mod initialized");

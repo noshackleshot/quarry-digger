@@ -6,6 +6,7 @@ import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
@@ -150,7 +151,7 @@ public class EnergyQuarryDiggerBlockEntity extends BlockEntity implements MenuPr
         Direction facing = state.getValue(ChestBlock.FACING);
         Direction back = facing.getOpposite();
         Direction right = back.getClockWise();
-        int minY = 1; // protect from mining the void, change if needed
+        int minY = 1;
         int maxY = be.worldPosition.getY() - 1;
 
         int yWithBlock = findHighestBreakableY(level, right, back, be.startX, be.startZ, minY, maxY);
@@ -190,6 +191,24 @@ public class EnergyQuarryDiggerBlockEntity extends BlockEntity implements MenuPr
                 continue;
 
             if (++be.breakProgress < BREAK_INTERVAL) {
+                if (!level.isClientSide) {
+                    double quarryX = be.worldPosition.getX() + 0.5;
+                    double quarryY = be.worldPosition.getY() + 0.5;
+                    double quarryZ = be.worldPosition.getZ() + 0.5;
+                    double targetX = target.getX() + 0.5;
+                    double targetZ = target.getZ() + 0.5;
+                    double targetY = target.getY() + 0.5;
+
+                    for (double t = 0; t <= 1; t += 0.05) {
+                        double x = quarryX + t * (targetX - quarryX);
+                        double z = quarryZ + t * (targetZ - quarryZ);
+                        ((ServerLevel) level).sendParticles(ParticleTypes.END_ROD, x, quarryY, z, 1, 0, 0, 0, 0);
+                    }
+
+                    for (double y = quarryY; y >= targetY; y -= 0.1) {
+                        ((ServerLevel) level).sendParticles(ParticleTypes.END_ROD, targetX, y, targetZ, 1, 0, 0, 0, 0);
+                    }
+                }
                 be.gridIndex = idx;
                 be.setChanged();
                 return;
