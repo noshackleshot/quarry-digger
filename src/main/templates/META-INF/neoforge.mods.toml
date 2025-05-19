@@ -15,7 +15,7 @@ authors           = "Danila Kiva"
 [[dependencies.quarrydigger]]
 modId="neoforge"
 mandatory=true
-versionRange="[21.1.171,)"
+versionRange="[21.1.148,)"
 ordering="NONE"
 side="BOTH"
 [[dependencies.quarrydigger]]
