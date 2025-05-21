@@ -1,8 +1,9 @@
 package com.shackleshot.quarrydigger;
 
-import com.shackleshot.quarrydigger.energy.EnergyBlockEntityTypeInit;
-import com.shackleshot.quarrydigger.energy.EnergyQuarryDiggerBlock;
+import com.shackleshot.quarrydigger.energy.*;
 
+import com.shackleshot.quarrydigger.energymedium.EnergyBlockEntityTypeInitMedium;
+import com.shackleshot.quarrydigger.energymedium.EnergyQuarryDiggerBlockMedium;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -61,13 +62,30 @@ public class QuarryDiggerMod {
                     ENERGY_QUARRY_DIGGER_BLOCK
             );
 
+    public static final DeferredBlock<EnergyQuarryDiggerBlockMedium> ENERGY_QUARRY_DIGGER_BLOCK_MEDIUM =
+            BLOCKS.registerBlock(
+                    "energy_quarry_digger_block_medium",
+                    EnergyQuarryDiggerBlockMedium::new,
+                    BlockBehaviour.Properties.of()
+                            .mapColor(MapColor.METAL)
+                            .strength(4.0f)
+            );
+
+    public static final DeferredItem<BlockItem> ENERGY_QUARRY_DIGGER_ITEM_MEDIUM =
+            ITEMS.registerSimpleBlockItem(
+                    "energy_quarry_digger_block_medium",
+                    ENERGY_QUARRY_DIGGER_BLOCK_MEDIUM
+            );
+
     public QuarryDiggerMod(IEventBus modBus) {
         BLOCKS.register(modBus);
         ITEMS.register(modBus);
         BlockEntityTypeInit.BLOCK_ENTITIES.register(modBus);
         MenuTypeInit.MENUS.register(modBus);
         SoundInit.SOUND_EVENTS.register(modBus);
+
         EnergyBlockEntityTypeInit.BLOCK_ENTITIES.register(modBus);
+        EnergyBlockEntityTypeInitMedium.BLOCK_ENTITIES.register(modBus);
 
         CreativeTabInit.register(modBus);
 
@@ -81,6 +99,11 @@ public class QuarryDiggerMod {
         event.registerBlockEntity(
                 Capabilities.EnergyStorage.BLOCK,
                 EnergyBlockEntityTypeInit.ENERGY_QUARRY_DIGGER_BLOCK_ENTITY.get(),
+                (be, side) -> be.getEnergyStorage()
+        );
+        event.registerBlockEntity(
+                Capabilities.EnergyStorage.BLOCK,
+                EnergyBlockEntityTypeInitMedium.ENERGY_QUARRY_DIGGER_BLOCK_ENTITY_MEDIUM.get(),
                 (be, side) -> be.getEnergyStorage()
         );
     }

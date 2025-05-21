@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "quarry_digger",
+  "show_notification": true,
+  "category": "misc",
+  "pattern": [
+    "PDP",
+    "KCK",
+    "III"
+  ],
+  "key": {
+    "P": { "item": "minecraft:diamond_pickaxe" },
+    "D": { "item": "minecraft:diamond" },
+    "K": { "item": "quarrydigger:quarry_core" },
+    "C": { "item": "quarrydigger:energy_quarry_digger_block" },
+    "I": { "item": "minecraft:iron_block" }
+  },
+  "result": {
+    "id": "quarrydigger:energy_quarry_digger_block_medium",
+    "count": 1
+  }
+}

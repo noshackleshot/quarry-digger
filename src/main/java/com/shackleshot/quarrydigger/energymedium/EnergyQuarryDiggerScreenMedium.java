@@ -1,14 +1,14 @@
-package com.shackleshot.quarrydigger.energy;
+package com.shackleshot.quarrydigger.energymedium;
 
-import com.shackleshot.quarrydigger.QuarryDiggerMod;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.shackleshot.quarrydigger.QuarryDiggerMod;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 
-public class EnergyQuarryDiggerScreen extends AbstractContainerScreen<EnergyQuarryDiggerMenu> {
+public class EnergyQuarryDiggerScreenMedium extends AbstractContainerScreen<EnergyQuarryDiggerMenuMedium> {
     private static final ResourceLocation TEXTURE =
             ResourceLocation.fromNamespaceAndPath(QuarryDiggerMod.MOD_ID,
                     "textures/gui/container/energy_quarry_digger.png");
@@ -17,7 +17,7 @@ public class EnergyQuarryDiggerScreen extends AbstractContainerScreen<EnergyQuar
     private static final int TEX_WIDTH  = 168;
     private static final int TEX_HEIGHT = 168;
 
-    public EnergyQuarryDiggerScreen(EnergyQuarryDiggerMenu menu, Inventory inv, Component title) {
+    public EnergyQuarryDiggerScreenMedium(EnergyQuarryDiggerMenuMedium menu, Inventory inv, Component title) {
         super(menu, inv, title);
         this.imageWidth = TEX_WIDTH;
         this.imageHeight = TEX_HEIGHT;

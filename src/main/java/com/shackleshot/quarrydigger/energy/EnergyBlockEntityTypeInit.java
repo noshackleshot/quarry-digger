@@ -23,7 +23,6 @@ public class EnergyBlockEntityTypeInit {
                     .build(null)
     );
 
-    // Метод для привязки к модовой шине событий
     public static void register(IEventBus modBus) {
         BLOCK_ENTITIES.register(modBus);
     }
