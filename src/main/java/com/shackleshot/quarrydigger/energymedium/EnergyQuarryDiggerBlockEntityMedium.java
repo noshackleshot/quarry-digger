@@ -1,4 +1,4 @@
-package com.shackleshot.quarrydigger.energy;
+package com.shackleshot.quarrydigger.energymedium;
 
 import java.util.List;
 import java.util.Optional;
@@ -18,6 +18,7 @@ import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -28,8 +29,9 @@ import net.neoforged.neoforge.energy.EnergyStorage;
 import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.capabilities.Capabilities;
 
-public class EnergyQuarryDiggerBlockEntity extends BlockEntity implements MenuProvider {
-    public static final int CAPACITY = 10_000;
+public class EnergyQuarryDiggerBlockEntityMedium extends BlockEntity implements MenuProvider {
+    public static final int CAPACITY = 20_000;
+    public static final double PARTICLE_FADE_STEP = 0.1D;
 
     protected final int digRadius;
     protected final int energyPerOperation;
@@ -37,33 +39,36 @@ public class EnergyQuarryDiggerBlockEntity extends BlockEntity implements MenuPr
 
     private int breakProgress = 0;
     private int gridIndex = 0;
+    private Direction facingCached = null;
     private int startX = 0, startZ = 0;
 
     public final EnergyStorage energy = new EnergyStorage(CAPACITY, CAPACITY, CAPACITY);
 
-    public EnergyQuarryDiggerBlockEntity(BlockPos pos, BlockState state, int digRadius, int energyPerOperation, int breakInterval) {
-        super(EnergyBlockEntityTypeInit.ENERGY_QUARRY_DIGGER_BLOCK_ENTITY.get(), pos, state);
+    public EnergyQuarryDiggerBlockEntityMedium(BlockPos pos, BlockState state, int digRadius, int energyPerOperation, int breakInterval) {
+        super(EnergyBlockEntityTypeInitMedium.ENERGY_QUARRY_DIGGER_BLOCK_ENTITY_MEDIUM.get(), pos, state);
         this.digRadius = digRadius;
         this.energyPerOperation = energyPerOperation;
         this.breakInterval = breakInterval;
-        resetDiggingPosition();
+        resetDiggingPosition(state.getValue(ChestBlock.FACING));
     }
 
-    // Для совместимости (стандартный 3x3, 10_000 энергии, 20 тиков на блок)
-    public EnergyQuarryDiggerBlockEntity(BlockPos pos, BlockState state) {
-        this(pos, state, 3, 10_000, 20);
+    public EnergyQuarryDiggerBlockEntityMedium(BlockPos pos, BlockState state) {
+        this(pos, state, 7, 20_000, 10);
     }
 
-    private void resetDiggingPosition() {
-        Direction facing = getBlockState().getValue(ChestBlock.FACING);
+    private void resetDiggingPosition(Direction facing) {
         Direction back = facing.getOpposite();
-        Direction left = back.getCounterClockWise();
-        BlockPos base = worldPosition.relative(back).relative(left);
+        Direction right = back.getClockWise();
 
-        startX = base.getX();
-        startZ = base.getZ();
+        BlockPos behind = worldPosition.relative(back);
+
+        int half = digRadius / 2;
+        startX = behind.getX() - right.getStepX() * (half - (digRadius % 2 == 0 ? 1 : 0));
+        startZ = behind.getZ() - right.getStepZ() * (half - (digRadius % 2 == 0 ? 1 : 0));
+
         gridIndex = 0;
         breakProgress = 0;
+        facingCached = facing;
     }
 
     @Override
@@ -74,6 +79,7 @@ public class EnergyQuarryDiggerBlockEntity extends BlockEntity implements MenuPr
         tag.putInt("GridIndex", gridIndex);
         tag.putInt("StartX", startX);
         tag.putInt("StartZ", startZ);
+        if (facingCached != null) tag.putInt("Facing", facingCached.ordinal());
     }
 
     @Override
@@ -85,6 +91,7 @@ public class EnergyQuarryDiggerBlockEntity extends BlockEntity implements MenuPr
         gridIndex = tag.getInt("GridIndex");
         startX = tag.getInt("StartX");
         startZ = tag.getInt("StartZ");
+        if (tag.contains("Facing")) facingCached = Direction.values()[tag.getInt("Facing")];
     }
 
     @Override
@@ -111,26 +118,26 @@ public class EnergyQuarryDiggerBlockEntity extends BlockEntity implements MenuPr
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("container.quarrydigger.energy_quarry_digger");
+        return Component.translatable("container.quarrydigger.energy_quarry_digger_medium");
     }
 
     @Override
     public AbstractContainerMenu createMenu(int id, Inventory inv, Player player) {
-        return new EnergyQuarryDiggerMenu(id, inv, this.worldPosition);
+        return new EnergyQuarryDiggerMenuMedium(id, inv, this.worldPosition);
     }
 
     public EnergyStorage getEnergyStorage() {
         return energy;
     }
 
-    // Получение позиции в сетке копания любого радиуса
     private BlockPos getGridPos(Direction right, Direction back, int dx, int dz, int y) {
-        int x = startX + right.getStepX() * dx + back.getStepX() * dz;
-        int z = startZ + right.getStepZ() * dx + back.getStepZ() * dz;
-        return new BlockPos(x, y, z);
+        return new BlockPos(
+                startX + right.getStepX() * dx + back.getStepX() * dz,
+                y,
+                startZ + right.getStepZ() * dx + back.getStepZ() * dz
+        );
     }
 
-    // Получаем "поверхность" - высоты верхних твёрдых блоков в каждой колонке
     private int[] getSurfaceHeights(Level level, Direction right, Direction back) {
         int[] surface = new int[digRadius * digRadius];
         int minY = level.getMinBuildHeight();
@@ -152,7 +159,6 @@ public class EnergyQuarryDiggerBlockEntity extends BlockEntity implements MenuPr
         return surface;
     }
 
-    // Гладкая ли поверхность?
     private boolean isSurfaceFlat(int[] surface) {
         int min = Integer.MAX_VALUE, max = Integer.MIN_VALUE;
         for (int h : surface) {
@@ -162,7 +168,6 @@ public class EnergyQuarryDiggerBlockEntity extends BlockEntity implements MenuPr
         return max - min <= 1;
     }
 
-    // Возвращает следующий блок для копания — в зависимости от типа поверхности
     private BlockPos findNextBreakableSmart(Level level, Direction right, Direction back) {
         int minY = level.getMinBuildHeight();
         int maxY = worldPosition.getY() - 1;
@@ -171,7 +176,6 @@ public class EnergyQuarryDiggerBlockEntity extends BlockEntity implements MenuPr
         int[] surface = getSurfaceHeights(level, right, back);
 
         if (isSurfaceFlat(surface)) {
-            // Если поверхность гладкая — копаем по слоям, сверху вниз
             for (int y = maxY; y >= minY; y--) {
                 for (int tries = 0; tries < gridArea; tries++) {
                     int idx = (startIdx + tries) % gridArea;
@@ -186,7 +190,6 @@ public class EnergyQuarryDiggerBlockEntity extends BlockEntity implements MenuPr
                 }
             }
         } else {
-            // Поверхность не ровная — ищем верхний из всех доступных блоков (максимальный surface)
             int maxSurface = Integer.MIN_VALUE;
             for (int idx = 0; idx < gridArea; idx++) {
                 if (surface[idx] > maxSurface) {
@@ -210,12 +213,17 @@ public class EnergyQuarryDiggerBlockEntity extends BlockEntity implements MenuPr
         return null;
     }
 
-    public static void tick(Level level, BlockPos pos, BlockState state, EnergyQuarryDiggerBlockEntity be) {
+    public static void tick(Level level, BlockPos pos, BlockState state, EnergyQuarryDiggerBlockEntityMedium be) {
         if (level.isClientSide) return;
 
         Direction facing = state.getValue(ChestBlock.FACING);
         Direction back = facing.getOpposite();
         Direction right = back.getClockWise();
+
+        if (be.facingCached == null || be.facingCached != facing) {
+            be.resetDiggingPosition(facing);
+        }
+
         int gridArea = be.digRadius * be.digRadius;
 
         if (be.energy.getEnergyStored() < be.energyPerOperation) {
@@ -246,7 +254,7 @@ public class EnergyQuarryDiggerBlockEntity extends BlockEntity implements MenuPr
                     double z = quarryZ + t * (targetZ - quarryZ);
                     ((ServerLevel) level).sendParticles(ParticleTypes.END_ROD, x, quarryY, z, 1, 0, 0, 0, 0);
                 }
-                for (double y = quarryY; y >= targetY; y -= 0.1) {
+                for (double y = quarryY; y >= targetY; y -= PARTICLE_FADE_STEP) {
                     ((ServerLevel) level).sendParticles(ParticleTypes.END_ROD, targetX, y, targetZ, 1, 0, 0, 0, 0);
                 }
             }
@@ -255,7 +263,7 @@ public class EnergyQuarryDiggerBlockEntity extends BlockEntity implements MenuPr
         }
 
         if (!level.isClientSide && !targetState.isAir() && !targetState.is(Blocks.BEDROCK)) {
-            List<net.minecraft.world.item.ItemStack> drops =
+            List<ItemStack> drops =
                     Block.getDrops(targetState, (ServerLevel) level, target, null);
             BlockPos outPos = pos.relative(facing);
             Optional<IItemHandler> handlerOpt = Optional.ofNullable(level.getCapability(

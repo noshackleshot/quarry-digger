@@ -1,7 +1,9 @@
 {
   "block.quarrydigger.quarry_digger_block": "Quarry Digger",
-  "block.quarrydigger.energy_quarry_digger_block": "Energy Quarry Digger",
   "item.quarrydigger.quarry_digger_block": "Quarry Digger",
-  "item.quarrydigger.energy_quarry_digger_block": "Energy Quarry Digger",
+  "block.quarrydigger.energy_quarry_digger_block": "Small Energy Quarry",
+  "item.quarrydigger.energy_quarry_digger_block": "Small Energy Quarry",
+  "block.quarrydigger.energy_quarry_digger_block_medium": "Medium Energy Quarry",
+  "item.quarrydigger.energy_quarry_digger_block_medium": "Medium Energy Quarry",
   "item.quarrydigger.quarry_core": "Quarry Core"
 }
