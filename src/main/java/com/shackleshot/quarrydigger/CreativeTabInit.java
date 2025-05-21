@@ -18,6 +18,7 @@ public class CreativeTabInit {
                     .displayItems((params, out) -> {
                         out.accept(QuarryDiggerMod.QUARRY_DIGGER_ITEM.get());
                         out.accept(QuarryDiggerMod.ENERGY_QUARRY_DIGGER_ITEM.get());
+                        out.accept(QuarryDiggerMod.ENERGY_QUARRY_DIGGER_ITEM_MEDIUM.get());
                         out.accept(QuarryDiggerMod.QUARRY_CORE_ITEM.get());
                     })
                     .build());

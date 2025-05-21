@@ -4,8 +4,8 @@ import java.util.function.Supplier;
 
 import com.shackleshot.quarrydigger.energy.EnergyQuarryDiggerMenu;
 
+import com.shackleshot.quarrydigger.energymedium.EnergyQuarryDiggerMenuMedium;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.inventory.MenuType;
 
 import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
@@ -23,12 +23,20 @@ public class MenuTypeInit {
                     )
             );
 
-    public static final Supplier<MenuType<EnergyQuarryDiggerMenu>> ENERGY_QUARRY_DIGGER_MENU =
-            MENUS.register("energy_quarry_digger_menu", () ->
-                    IMenuTypeExtension.create(
-                            (windowId, inv, buf) -> new EnergyQuarryDiggerMenu(windowId, inv, buf.readBlockPos())
+    public static final Supplier<MenuType<EnergyQuarryDiggerMenuMedium>> ENERGY_QUARRY_DIGGER_MENU_MEDIUM =
+            MENUS.register("energy_quarry_digger_menu_medium",
+                    () -> IMenuTypeExtension.create(
+                            (windowId, inv, buf) -> new EnergyQuarryDiggerMenuMedium(windowId, inv, buf.readBlockPos())
                     )
             );
+
+
+    public static final Supplier<MenuType<EnergyQuarryDiggerMenu>> ENERGY_QUARRY_DIGGER_MENU = MENUS.register("energy_quarry_digger_menu", () ->
+            IMenuTypeExtension.create(
+                    (windowId, inv, buf) -> new EnergyQuarryDiggerMenu(windowId, inv, buf.readBlockPos())
+            )
+    );
+
 
     public static void register(IEventBus modBus) {
         MENUS.register(modBus);

@@ -2,6 +2,7 @@ package com.shackleshot.quarrydigger;
 
 import com.shackleshot.quarrydigger.energy.EnergyQuarryDiggerScreen;
 
+import com.shackleshot.quarrydigger.energymedium.EnergyQuarryDiggerScreenMedium;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -22,6 +23,10 @@ public class ClientSetup {
         event.register(
                 MenuTypeInit.ENERGY_QUARRY_DIGGER_MENU.get(),
                 EnergyQuarryDiggerScreen::new
+        );
+        event.register(
+                MenuTypeInit.ENERGY_QUARRY_DIGGER_MENU_MEDIUM.get(),
+                EnergyQuarryDiggerScreenMedium::new
         );
     }
 }

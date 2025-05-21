@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north":  { "model": "quarrydigger:block/energy_quarry_digger_block", "y": 180 },
+    "facing=south":  { "model": "quarrydigger:block/energy_quarry_digger_block", "y": 0   },
+    "facing=west":   { "model": "quarrydigger:block/energy_quarry_digger_block", "y": 270 },
+    "facing=east":   { "model": "quarrydigger:block/energy_quarry_digger_block", "y": 90  }
+  }
+}
