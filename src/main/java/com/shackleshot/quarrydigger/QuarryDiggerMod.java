@@ -26,22 +26,6 @@ public class QuarryDiggerMod {
     public static final DeferredItem<Item> QUARRY_CORE_ITEM =
             ITEMS.register("quarry_core", () -> new Item(new Item.Properties()));
 
-    public static final DeferredBlock<QuarryDiggerBlock> QUARRY_DIGGER_BLOCK =
-            BLOCKS.registerBlock(
-                    "quarry_digger_block",
-                    QuarryDiggerBlock::new,
-                    BlockBehaviour.Properties.of()
-                            .mapColor(MapColor.METAL)
-                            .strength(4.0f)
-            );
-
-    public static final DeferredItem<BlockItem> QUARRY_DIGGER_ITEM =
-            ITEMS.registerSimpleBlockItem(
-                    "quarry_digger_block",
-                    QUARRY_DIGGER_BLOCK,
-                    new Item.Properties()
-            );
-
     public static final DeferredBlock<EnergyQuarryDiggerBlock> ENERGY_QUARRY_DIGGER_BLOCK =
             BLOCKS.registerBlock(
                     "energy_quarry_digger_block",
@@ -75,7 +59,6 @@ public class QuarryDiggerMod {
     public QuarryDiggerMod(IEventBus modBus) {
         BLOCKS.register(modBus);
         ITEMS.register(modBus);
-        BlockEntityTypeInit.BLOCK_ENTITIES.register(modBus);
         MenuTypeInit.MENUS.register(modBus);
         SoundInit.SOUND_EVENTS.register(modBus);
 

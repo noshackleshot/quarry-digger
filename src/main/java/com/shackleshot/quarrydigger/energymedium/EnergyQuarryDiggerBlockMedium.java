@@ -45,6 +45,7 @@ public class EnergyQuarryDiggerBlockMedium extends Block implements EntityBlock 
 
     @Override
     public void playerDestroy(Level level, Player player, BlockPos pos, BlockState state, @Nullable BlockEntity blockEntity, ItemStack tool) {
+        System.out.println("Destroying block: " + this);
         if (!level.isClientSide) {
             popResource(level, pos, new ItemStack(this));
         }

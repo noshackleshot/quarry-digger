@@ -18,6 +18,7 @@ import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -255,7 +256,7 @@ public class EnergyQuarryDiggerBlockEntity extends BlockEntity implements MenuPr
         }
 
         if (!level.isClientSide && !targetState.isAir() && !targetState.is(Blocks.BEDROCK)) {
-            List<net.minecraft.world.item.ItemStack> drops =
+            List<ItemStack> drops =
                     Block.getDrops(targetState, (ServerLevel) level, target, null);
             BlockPos outPos = pos.relative(facing);
             Optional<IItemHandler> handlerOpt = Optional.ofNullable(level.getCapability(

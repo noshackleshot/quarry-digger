@@ -14,9 +14,7 @@ public class CreativeTabInit {
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> MAIN =
             TABS.register("main", () -> CreativeModeTab.builder()
                     .title(net.minecraft.network.chat.Component.translatable("itemGroup.quarrydigger"))
-                    .icon(() -> new ItemStack(QuarryDiggerMod.QUARRY_DIGGER_BLOCK.get()))
                     .displayItems((params, out) -> {
-                        out.accept(QuarryDiggerMod.QUARRY_DIGGER_ITEM.get());
                         out.accept(QuarryDiggerMod.ENERGY_QUARRY_DIGGER_ITEM.get());
                         out.accept(QuarryDiggerMod.ENERGY_QUARRY_DIGGER_ITEM_MEDIUM.get());
                         out.accept(QuarryDiggerMod.QUARRY_CORE_ITEM.get());

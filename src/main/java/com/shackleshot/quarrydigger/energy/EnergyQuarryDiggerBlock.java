@@ -58,6 +58,7 @@ public class EnergyQuarryDiggerBlock extends Block implements EntityBlock {
     @Override
     public void playerDestroy(Level level, Player player, BlockPos pos, BlockState state, @Nullable BlockEntity blockEntity, ItemStack tool) {
         if (!level.isClientSide) {
+            System.out.println("Destroying block: " + this);
             popResource(level, pos, new ItemStack(this));
         }
     }
@@ -76,9 +77,4 @@ public class EnergyQuarryDiggerBlock extends Block implements EntityBlock {
         return null;
     }
 
-    @Override
-    public boolean canHarvestBlock(BlockState state, BlockGetter level, BlockPos pos, Player player) {
-        ItemStack stack = player.getMainHandItem();
-        return stack.getItem() == Items.DIAMOND_PICKAXE || stack.getItem() == Items.NETHERITE_PICKAXE;
-    }
 }

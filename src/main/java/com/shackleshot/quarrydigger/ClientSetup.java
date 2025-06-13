@@ -17,10 +17,6 @@ public class ClientSetup {
     @SubscribeEvent
     public static void onRegisterScreens(RegisterMenuScreensEvent event) {
         event.register(
-                MenuTypeInit.QUARRY_DIGGER_MENU.get(),
-                QuarryDiggerScreen::new
-        );
-        event.register(
                 MenuTypeInit.ENERGY_QUARRY_DIGGER_MENU.get(),
                 EnergyQuarryDiggerScreen::new
         );

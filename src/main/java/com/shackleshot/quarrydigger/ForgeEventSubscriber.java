@@ -28,8 +28,7 @@ public class ForgeEventSubscriber {
         BlockPos pos = event.getPos();
         // Проверяем и стандартный блок, и энерго-блок
         var state = level.getBlockState(pos);
-        if (!state.is(QuarryDiggerMod.QUARRY_DIGGER_BLOCK.get()) &&
-                !state.is(QuarryDiggerMod.ENERGY_QUARRY_DIGGER_BLOCK.get())) {
+        if (!state.is(QuarryDiggerMod.ENERGY_QUARRY_DIGGER_BLOCK.get())) {
             return;
         }
 

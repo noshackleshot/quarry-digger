@@ -16,13 +16,6 @@ public class MenuTypeInit {
     public static final DeferredRegister<MenuType<?>> MENUS =
             DeferredRegister.create(BuiltInRegistries.MENU, QuarryDiggerMod.MOD_ID);
 
-    public static final Supplier<MenuType<QuarryDiggerMenu>> QUARRY_DIGGER_MENU =
-            MENUS.register("quarry_digger_menu", () ->
-                    IMenuTypeExtension.create(
-                            (windowId, inv, buf) -> new QuarryDiggerMenu(windowId, inv, buf.readBlockPos())
-                    )
-            );
-
     public static final Supplier<MenuType<EnergyQuarryDiggerMenuMedium>> ENERGY_QUARRY_DIGGER_MENU_MEDIUM =
             MENUS.register("energy_quarry_digger_menu_medium",
                     () -> IMenuTypeExtension.create(
